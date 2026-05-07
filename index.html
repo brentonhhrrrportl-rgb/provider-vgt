@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vigenère">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f0f13">
+<link rel="manifest" href="manifest.json">
+<title>Vigenère</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0f0f13;
+  --surface:  #17171d;
+  --surface2: #1e1e26;
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.12);
+  --accent:   #00e5a0;
+  --accent-d: #00b87f;
+  --danger:   #ff4d6d;
+  --text:     #f0f0f5;
+  --sub:      #7070a0;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Syne', sans-serif;
+  --radius:   16px;
+  --inset-top: env(safe-area-inset-top, 0px);
+  --inset-bot: env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  padding: calc(var(--inset-top) + 14px) 20px 14px;
+  background: rgba(15,15,19,0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+
+.logo {
+  font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+  background: linear-gradient(120deg, #fff 30%, var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tab-bar {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 3px;
+  gap: 2px;
+}
+
+.tab {
+  background: none; border: none;
+  color: var(--sub);
+  font-family: var(--sans);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+  padding: 7px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  min-height: 36px;
+  white-space: nowrap;
+}
+.tab.active { background: var(--accent); color: #000; }
+
+/* ── MAIN SCROLL ── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px calc(32px + var(--inset-bot));
+}
+
+/* ── PANELS ── */
+.panel { display: none; }
+.panel.visible { display: block; }
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.card:focus-within { border-color: var(--border2); }
+
+.card-label {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--sub);
+  margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* ── ALPHABET CHIPS ── */
+.alpha-chips {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--sub);
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 32px; display: flex; align-items: center;
+}
+.chip.active { background: var(--accent); border-color: var(--accent); color: #000; }
+.chip:active { transform: scale(0.95); }
+
+.alpha-preview {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--sub);
+  letter-spacing: 1px;
+  line-height: 1.6;
+  word-break: break-all;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+  min-height: 36px;
+}
+
+.custom-alpha-wrap { display: none; }
+.custom-alpha-wrap.visible { display: block; }
+
+/* ── INPUTS ── */
+textarea, input[type=text] {
+  width: 100%;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px;
+  padding: 12px;
+  resize: none;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  -webkit-appearance: none;
+}
+textarea { height: 100px; line-height: 1.6; }
+textarea:focus, input[type=text]:focus {
+  border-color: rgba(0,229,160,0.4);
+  box-shadow: 0 0 0 3px rgba(0,229,160,0.08);
+}
+
+.error-msg {
+  font-size: 11px; color: var(--danger);
+  margin-top: 6px; min-height: 16px; letter-spacing: 0.3px;
+}
+
+/* ── KEY ROW ── */
+.key-row { display: flex; gap: 10px; align-items: flex-end; }
+.key-row input { flex: 1; min-width: 0; }
+
+/* ── BUTTONS ── */
+.btn {
+  background: var(--accent);
+  border: none; border-radius: 10px;
+  color: #000; font-family: var(--sans);
+  font-size: 14px; font-weight: 700;
+  padding: 0 20px; height: 46px;
+  cursor: pointer; white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+  -webkit-appearance: none;
+  letter-spacing: 0.2px;
+}
+.btn:active { transform: scale(0.96); background: var(--accent-d); }
+
+.btn-ghost {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+}
+.btn-ghost:active { background: var(--surface); }
+
+.btn-full { width: 100%; justify-content: center; display: flex; align-items: center; gap: 8px; }
+
+/* ── OUTPUT ── */
+.output-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.output-text {
+  font-family: var(--mono);
+  font-size: 15px; line-height: 1.8;
+  color: var(--accent);
+  word-break: break-all;
+  min-height: 52px;
+  letter-spacing: 0.5px;
+}
+.output-text.empty { color: var(--sub); font-style: italic; font-family: var(--sans); font-size: 14px; }
+
+.copy-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--sub);
+  font-family: var(--sans);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 6px 12px; cursor: pointer;
+  min-height: 34px;
+  transition: all 0.18s;
+}
+.copy-btn.ok { border-color: var(--accent); color: var(--accent); }
+
+/* ── STATS ── */
+.stats {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.stat { font-size: 10px; color: var(--sub); font-weight: 500; }
+.stat b { color: var(--text); font-weight: 600; }
+
+/* ── BRUTE FORCE PANEL ── */
+.bf-desc {
+  font-size: 13px; color: var(--sub); line-height: 1.6;
+  margin-bottom: 14px;
+}
+.bf-desc b { color: var(--text); }
+
+.bf-options {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+}
+
+.bf-progress-wrap {
+  margin-top: 14px;
+  display: none;
+}
+.bf-progress-wrap.visible { display: block; }
+
+.bf-status {
+  font-family: var(--mono);
+  font-size: 11px; color: var(--sub);
+  margin-bottom: 8px; letter-spacing: 0.5px;
+  min-height: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.progress-bar-bg {
+  background: var(--surface2);
+  border-radius: 99px;
+  height: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-d), var(--accent));
+  border-radius: 99px;
+  width: 0%;
+  transition: width 0.1s;
+}
+
+/* Results list */
+.bf-results { display: flex; flex-direction: column; gap: 8px; }
+
+.bf-result-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  animation: fadeSlideIn 0.3s ease forwards;
+  opacity: 0;
+}
+.bf-result-item:nth-child(1) { animation-delay: 0ms; }
+.bf-result-item:nth-child(2) { animation-delay: 60ms; }
+.bf-result-item:nth-child(3) { animation-delay: 120ms; }
+.bf-result-item:nth-child(4) { animation-delay: 180ms; }
+.bf-result-item:nth-child(5) { animation-delay: 240ms; }
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bf-result-item:active { border-color: var(--accent); background: rgba(0,229,160,0.05); }
+
+.bf-result-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.bf-key-badge {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 600;
+  color: var(--accent);
+  background: rgba(0,229,160,0.1);
+  padding: 3px 8px; border-radius: 6px;
+}
+.bf-score {
+  font-size: 10px; color: var(--sub); font-weight: 500;
+}
+.bf-snippet {
+  font-family: var(--mono);
+  font-size: 12px; color: var(--text);
+  line-height: 1.5;
+  word-break: break-all;
+  opacity: 0.8;
+}
+
+.bf-use-btn {
+  margin-top: 8px;
+  font-size: 11px; font-weight: 600; color: var(--sub);
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+
+/* scanning animation */
+.bf-scan-row {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--sub);
+  letter-spacing: 1px;
+  padding: 6px 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.bf-scan-row.active { opacity: 1; color: var(--accent); }
+
+/* ── TABULA RECTA ── */
+.tabula-toggle {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--sub);
+  font-family: var(--sans);
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 13px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s;
+  min-height: 48px;
+  margin-bottom: 10px;
+}
+.tabula-toggle:active { border-color: var(--accent); color: var(--accent); }
+
+.tabula-wrap {
+  display: none;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.tabula-wrap.visible { display: block; }
+table { border-collapse: collapse; font-size: 8px; font-family: var(--mono); }
+td { padding: 2px 3px; text-align: center; color: var(--sub); }
+td.th { color: var(--accent); font-weight: 600; }
+td.hl { color: #000; background: var(--accent); border-radius: 2px; }
+
+/* ── INSTALL BANNER ── */
+.install-banner {
+  display: none;
+  background: linear-gradient(135deg, rgba(0,229,160,0.12), rgba(0,229,160,0.04));
+  border: 1px solid rgba(0,229,160,0.2);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  align-items: center; gap: 12px;
+}
+.install-banner.visible { display: flex; }
+.install-icon { font-size: 24px; flex-shrink: 0; }
+.install-text { flex: 1; }
+.install-text strong { font-size: 13px; display: block; margin-bottom: 2px; }
+.install-text span { font-size: 11px; color: var(--sub); }
+.install-btn {
+  background: var(--accent); border: none;
+  border-radius: 8px; color: #000;
+  font-family: var(--sans); font-size: 12px; font-weight: 700;
+  padding: 8px 14px; cursor: pointer; flex-shrink: 0;
+  min-height: 36px;
+}
+
+/* ── TRANSITIONS ── */
+.fade-in { animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.char-reveal span {
+  display: inline;
+  animation: charIn 0.02s ease forwards;
+  opacity: 0;
+}
+@keyframes charIn { to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">Vigenère</div>
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('cipher')">Şifrele</button>
+    <button class="tab" onclick="switchTab('brute')">Kır</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- INSTALL BANNER -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-icon">📲</div>
+    <div class="install-text">
+      <strong>Uygulamayı Yükle</strong>
+      <span>Ana ekrana ekle, offline çalış</span>
+    </div>
+    <button class="install-btn" id="installBtn">Yükle</button>
+  </div>
+
+  <!-- ════ CIPHER PANEL ════ -->
+  <div class="panel visible" id="panelCipher">
+
+    <!-- Mode -->
+    <div class="card">
+      <div class="card-label">İşlem</div>
+      <div style="display:flex;gap:8px">
+        <button class="chip active" id="modeEnc" onclick="setCipherMode('enc')" style="flex:1;justify-content:center">🔒 Şifrele</button>
+        <button class="chip" id="modeDec" onclick="setCipherMode('dec')" style="flex:1;justify-content:center">🔓 Çöz</button>
+      </div>
+    </div>
+
+    <!-- Alphabet -->
+    <div class="card">
+      <div class="card-label">Alfabe</div>
+      <div class="alpha-chips">
+        <button class="chip active" onclick="selectAlpha('EN')">EN</button>
+        <button class="chip" onclick="selectAlpha('TR')">TR</button>
+        <button class="chip" onclick="selectAlpha('DE')">DE</button>
+        <button class="chip" onclick="selectAlpha('RU')">RU</button>
+        <button class="chip" onclick="selectAlpha('custom')">+ Özel</button>
+      </div>
+      <div class="custom-alpha-wrap" id="customAlphaWrap">
+        <input type="text" id="customAlphaInput" placeholder="Kendi alfabeni gir: ABCÇD…"
+          autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+          oninput="onCustomAlpha()" style="margin-bottom:8px">
+      </div>
+      <div class="alpha-preview" id="alphaPreview">A B C D E F G H I J K L M N O P Q R S T U V W X Y Z</div>
+    </div>
+
+    <!-- Input text -->
+    <div class="card">
+      <div class="card-label" id="inputLabel">Düz Metin</div>
+      <textarea id="inputText" placeholder="Metni buraya yazın…"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+      <p class="error-msg" id="inputError"></p>
+    </div>
+
+    <!-- Key -->
+    <div class="card">
+      <div class="card-label">Anahtar</div>
+      <div class="key-row">
+        <input type="text" id="keyInput" placeholder="örn: ANAHTAR"
+          autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+          oninput="sanitizeKey()">
+        <button class="btn" onclick="runCipher()">Uygula</button>
+      </div>
+      <p class="error-msg" id="keyError"></p>
+    </div>
+
+    <!-- Output -->
+    <div class="card" style="border-color: rgba(0,229,160,0.15)">
+      <div class="output-head">
+        <div class="card-label" id="outputLabel" style="margin:0">Şifreli Metin</div>
+        <button class="copy-btn" id="copyBtn" onclick="copyOut()">Kopyala</button>
+      </div>
+      <div class="output-text empty" id="outputText">Sonuç burada görünecek…</div>
+      <div class="stats" id="statsRow" style="display:none">
+        <div class="stat">Harf <b id="sChars">0</b></div>
+        <div class="stat">Anahtar <b id="sKey">0</b></div>
+        <div class="stat">Atlandı <b id="sSkip">0</b></div>
+      </div>
+    </div>
+
+    <!-- Tabula Recta -->
+    <button class="tabula-toggle" onclick="toggleTabula()">
+      <span>Tabula Recta</span>
+      <span id="tabulaArrow">▾ Göster</span>
+    </button>
+    <div class="tabula-wrap" id="tabulaWrap"></div>
+
+  </div>
+  <!-- /CIPHER PANEL -->
+
+  <!-- ════ BRUTE FORCE PANEL ════ -->
+  <div class="panel" id="panelBrute">
+
+    <div class="card">
+      <div class="card-label">Şifreli Metin</div>
+      <textarea id="bfInput" placeholder="Kırılacak şifreli metni yapıştırın…"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+      <p class="error-msg" id="bfError"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Yöntem</div>
+      <div class="bf-options" id="bfMethodChips">
+        <button class="chip active" data-method="auto" onclick="selectBfMethod(this)">🧠 Otomatik (Kasiski+Freq)</button>
+        <button class="chip" data-method="brute" onclick="selectBfMethod(this)">⚡ Kısa Anahtar Tara</button>
+      </div>
+
+      <div id="bfBruteOpts" style="display:none;margin-bottom:10px">
+        <div class="card-label" style="margin-bottom:6px">Maks. anahtar uzunluğu</div>
+        <div style="display:flex;gap:6px" id="bfLenChips">
+          <button class="chip active" data-len="1" onclick="selectBfLen(this)">1</button>
+          <button class="chip" data-len="2" onclick="selectBfLen(this)">2</button>
+          <button class="chip" data-len="3" onclick="selectBfLen(this)">3</button>
+        </div>
+      </div>
+
+      <button class="btn btn-full" onclick="startBruteForce()">
+        <span>🔍</span><span>Şifreyi Kır</span>
+      </button>
+    </div>
+
+    <!-- Progress -->
+    <div class="bf-progress-wrap" id="bfProgressWrap">
+      <div class="card">
+        <div class="card-label">Taranıyor</div>
+        <div class="bf-scan-row" id="bfScanRow">—</div>
+        <div class="progress-bar-bg"><div class="progress-bar" id="bfBar"></div></div>
+        <div class="bf-status" id="bfStatus">Hazırlanıyor…</div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="bfResultsWrap" style="display:none">
+      <div class="card-label" style="padding:0 4px;margin-bottom:8px">En İyi Sonuçlar</div>
+      <div class="bf-results" id="bfResultsList"></div>
+    </div>
+
+  </div>
+  <!-- /BRUTE PANEL -->
+
+</div>
+<!-- /MAIN -->
+
+<script>
+// ══════════════════════════════════════════════
+// ALPHABETS
+// ══════════════════════════════════════════════
+const ALPHABETS = {
+  EN: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  TR: 'ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ',
+  DE: 'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜß',
+  RU: 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ',
+};
+
+let currentAlpha = 'EN';
+let customAlpha = '';
+let cipherMode = 'enc';
+let tabulaVisible = false;
+let bfMethod = 'auto';
+let bfMaxLen = 1;
+let bfRunning = false;
+
+function getAlpha() {
+  if (currentAlpha === 'custom') return customAlpha.toUpperCase();
+  return ALPHABETS[currentAlpha];
+}
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('visible'));
+  if (tab === 'cipher') {
+    document.querySelectorAll('.tab')[0].classList.add('active');
+    document.getElementById('panelCipher').classList.add('visible');
+  } else {
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('panelBrute').classList.add('visible');
+  }
+}
+
+// ══════════════════════════════════════════════
+// CIPHER MODE
+// ══════════════════════════════════════════════
+function setCipherMode(m) {
+  cipherMode = m;
+  document.getElementById('modeEnc').classList.toggle('active', m === 'enc');
+  document.getElementById('modeDec').classList.toggle('active', m === 'dec');
+  document.getElementById('inputLabel').textContent = m === 'enc' ? 'Düz Metin' : 'Şifreli Metin';
+  document.getElementById('outputLabel').textContent = m === 'enc' ? 'Şifreli Metin' : 'Çözülen Metin';
+  resetOutput();
+}
+
+// ══════════════════════════════════════════════
+// ALPHABET SELECTION
+// ══════════════════════════════════════════════
+function selectAlpha(a) {
+  currentAlpha = a;
+  document.querySelectorAll('.alpha-chips .chip').forEach(c => {
+    c.classList.toggle('active', c.textContent.trim().replace('+ Özel','custom') === a || (a === 'custom' && c.textContent.includes('Özel')));
+  });
+  const wrap = document.getElementById('customAlphaWrap');
+  wrap.classList.toggle('visible', a === 'custom');
+  updateAlphaPreview();
+  sanitizeKey();
+}
+
+function onCustomAlpha() {
+  customAlpha = document.getElementById('customAlphaInput').value;
+  updateAlphaPreview();
+  sanitizeKey();
+}
+
+function updateAlphaPreview() {
+  const alpha = getAlpha();
+  document.getElementById('alphaPreview').textContent = alpha ? [...alpha].join(' ') : '—';
+}
+
+function sanitizeKey() {
+  const alpha = getAlpha();
+  const input = document.getElementById('keyInput');
+  const upper = input.value.toUpperCase();
+  if (!alpha) { input.value = upper; return; }
+  input.value = [...upper].filter(c => alpha.includes(c)).join('');
+}
+
+// ══════════════════════════════════════════════
+// VIGENÈRE CORE
+// ══════════════════════════════════════════════
+function vigenere(text, key, alpha, encrypt) {
+  const t = text.toUpperCase();
+  const k = key.toUpperCase();
+  const n = alpha.length;
+  let result = '', ki = 0, skipped = 0;
+  for (let i = 0; i < t.length; i++) {
+    const ci = alpha.indexOf(t[i]);
+    if (ci === -1) { result += t[i]; skipped++; continue; }
+    const ki2 = alpha.indexOf(k[ki % k.length]);
+    if (ki2 === -1) { result += t[i]; ki++; continue; }
+    const out = encrypt ? (ci + ki2) % n : (ci - ki2 + n) % n;
+    result += alpha[out];
+    ki++;
+  }
+  return { result, skipped };
+}
+
+// ══════════════════════════════════════════════
+// RUN CIPHER
+// ══════════════════════════════════════════════
+function runCipher() {
+  const text = document.getElementById('inputText').value;
+  const key = document.getElementById('keyInput').value;
+  const alpha = getAlpha();
+
+  document.getElementById('inputError').textContent = '';
+  document.getElementById('keyError').textContent = '';
+
+  if (!text.trim()) { document.getElementById('inputError').textContent = '⚠ Metin boş olamaz.'; return; }
+  if (!key) { document.getElementById('keyError').textContent = '⚠ Anahtar gerekli.'; return; }
+  if (!alpha || alpha.length < 2) { document.getElementById('inputError').textContent = '⚠ Geçerli bir alfabe seçin.'; return; }
+
+  const r = vigenere(text, key, alpha, cipherMode === 'enc');
+  revealOutput(r.result);
+
+  document.getElementById('statsRow').style.display = 'flex';
+  document.getElementById('sChars').textContent = [...r.result].filter(c => alpha.includes(c)).length;
+  document.getElementById('sKey').textContent = key.length;
+  document.getElementById('sSkip').textContent = r.skipped;
+
+  if (tabulaVisible) buildTabula();
+}
+
+// ── Animated reveal ──
+function revealOutput(text) {
+  const el = document.getElementById('outputText');
+  el.className = 'output-text fade-in';
+  el.textContent = '';
+  const chars = [...text];
+  chars.forEach((ch, i) => {
+    const sp = document.createElement('span');
+    sp.textContent = ch;
+    sp.style.animationDelay = `${i * 18}ms`;
+    el.appendChild(sp);
+  });
+  el.classList.add('char-reveal');
+}
+
+function resetOutput() {
+  const el = document.getElementById('outputText');
+  el.textContent = 'Sonuç burada görünecek…';
+  el.className = 'output-text empty';
+  document.getElementById('statsRow').style.display = 'none';
+}
+
+function copyOut() {
+  const t = document.getElementById('outputText').textContent;
+  if (!t || t.includes('görünecek')) return;
+  navigator.clipboard.writeText(t).then(() => {
+    const b = document.getElementById('copyBtn');
+    b.textContent = '✓ Kopyalandı'; b.classList.add('ok');
+    setTimeout(() => { b.textContent = 'Kopyala'; b.classList.remove('ok'); }, 2000);
+  });
+}
+
+// ══════════════════════════════════════════════
+// TABULA RECTA
+// ══════════════════════════════════════════════
+function toggleTabula() {
+  tabulaVisible = !tabulaVisible;
+  document.getElementById('tabulaWrap').classList.toggle('visible', tabulaVisible);
+  document.getElementById('tabulaArrow').textContent = tabulaVisible ? '▴ Gizle' : '▾ Göster';
+  if (tabulaVisible) buildTabula();
+}
+
+function buildTabula() {
+  const alpha = getAlpha();
+  const key = document.getElementById('keyInput').value.toUpperCase();
+  const n = alpha.length;
+  let html = '<table><tr><td class="th">·</td>';
+  for (let c of alpha) html += `<td class="th">${c}</td>`;
+  html += '</tr>';
+  for (let r = 0; r < n; r++) {
+    const isKey = key.includes(alpha[r]);
+    html += `<tr><td class="th">${alpha[r]}</td>`;
+    for (let c = 0; c < n; c++) html += `<td${isKey ? ' class="hl"' : ''}>${alpha[(r + c) % n]}</td>`;
+    html += '</tr>';
+  }
+  html += '</table>';
+  document.getElementById('tabulaWrap').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// BRUTE FORCE
+// ══════════════════════════════════════════════
+
+// English letter frequencies (index = A-Z)
+const EN_FREQ = [0.082,0.015,0.028,0.043,0.127,0.022,0.020,0.061,0.070,0.002,0.008,0.040,0.024,0.067,0.075,0.019,0.001,0.060,0.063,0.091,0.028,0.010,0.023,0.001,0.020,0.001];
+// Turkish letter frequencies (rough approximation for A-Z subset)
+const TR_FREQ = [0.117,0.029,0.015,0.047,0.139,0.005,0.012,0.005,0.087,0.001,0.006,0.057,0.039,0.071,0.025,0.009,0.000,0.073,0.031,0.053,0.034,0.009,0.000,0.000,0.000,0.015];
+
+function selectBfMethod(el) {
+  document.querySelectorAll('#bfMethodChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  bfMethod = el.dataset.method;
+  document.getElementById('bfBruteOpts').style.display = bfMethod === 'brute' ? 'block' : 'none';
+}
+
+function selectBfLen(el) {
+  document.querySelectorAll('#bfLenChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  bfMaxLen = parseInt(el.dataset.len);
+}
+
+// Index of Coincidence
+function indexOfCoincidence(text) {
+  const freq = {};
+  let n = 0;
+  for (const c of text) {
+    if (/[A-Z]/.test(c)) { freq[c] = (freq[c] || 0) + 1; n++; }
+  }
+  if (n < 2) return 0;
+  let sum = 0;
+  for (const f of Object.values(freq)) sum += f * (f - 1);
+  return sum / (n * (n - 1));
+}
+
+// Kasiski: guess key length
+function guessKeyLength(text, maxLen = 8) {
+  const clean = text.replace(/[^A-Z]/g, '');
+  const scores = [];
+  for (let kl = 1; kl <= maxLen; kl++) {
+    let total = 0;
+    for (let i = 0; i < kl; i++) {
+      const every = [...clean].filter((_, idx) => idx % kl === i).join('');
+      total += indexOfCoincidence(every);
+    }
+    scores.push({ kl, ic: total / kl });
+  }
+  scores.sort((a, b) => b.ic - a.ic);
+  return scores.slice(0, 3).map(s => s.kl);
+}
+
+// Frequency attack on single column → best shift
+function bestShift(col, alpha) {
+  const n = alpha.length;
+  const freq = new Array(n).fill(0);
+  let total = 0;
+  for (const c of col) {
+    const i = alpha.indexOf(c);
+    if (i !== -1) { freq[i]++; total++; }
+  }
+  if (total === 0) return 0;
+
+  // Normalize
+  const f = freq.map(x => x / total);
+  // Reference: use EN_FREQ if alpha is EN, else uniform
+  const ref = alpha === ALPHABETS.EN ? EN_FREQ : new Array(n).fill(1/n);
+
+  let bestScore = -Infinity, bestK = 0;
+  for (let k = 0; k < n; k++) {
+    let score = 0;
+    for (let i = 0; i < n; i++) {
+      const ri = ref[i % ref.length] || 1/n;
+      score += f[(i + k) % n] * ri;
+    }
+    if (score > bestScore) { bestScore = score; bestK = k; }
+  }
+  return bestK;
+}
+
+// Score a decrypted text (higher = more English-like)
+function textScore(text) {
+  const clean = text.replace(/[^A-Z]/g, '');
+  if (!clean.length) return 0;
+  const freq = {};
+  for (const c of clean) freq[c] = (freq[c] || 0) + 1;
+  let score = 0;
+  const common = 'ETAOINSHRDLU';
+  for (const c of common) score += (freq[c] || 0);
+  return score / clean.length;
+}
+
+// Delay helper for UI updates
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+async function startBruteForce() {
+  if (bfRunning) return;
+  const raw = document.getElementById('bfInput').value.toUpperCase().replace(/[^A-Z]/g, '');
+  document.getElementById('bfError').textContent = '';
+
+  if (raw.length < 8) {
+    document.getElementById('bfError').textContent = '⚠ Yeterince uzun bir şifreli metin girin (en az 8 harf).';
+    return;
+  }
+
+  bfRunning = true;
+  const alpha = ALPHABETS.EN; // brute force currently EN only
+  const progressWrap = document.getElementById('bfProgressWrap');
+  const resultsWrap = document.getElementById('bfResultsWrap');
+  const bar = document.getElementById('bfBar');
+  const status = document.getElementById('bfStatus');
+  const scanRow = document.getElementById('bfScanRow');
+  const list = document.getElementById('bfResultsList');
+
+  progressWrap.classList.add('visible');
+  resultsWrap.style.display = 'none';
+  list.innerHTML = '';
+  bar.style.width = '0%';
+  scanRow.classList.add('active');
+
+  const results = [];
+
+  if (bfMethod === 'auto') {
+    // ── Kasiski + frequency ──
+    status.textContent = 'Anahtar uzunluğu tahmin ediliyor…';
+    bar.style.width = '10%';
+    await delay(120);
+
+    const keyLens = guessKeyLength(raw, 8);
+    const total = keyLens.length;
+
+    for (let li = 0; li < total; li++) {
+      const kl = keyLens[li];
+      status.textContent = `Anahtar uzunluğu ${kl} deneniyor…`;
+      scanRow.textContent = `KL=${kl} — IC analizi`;
+      bar.style.width = `${10 + (li / total) * 80}%`;
+      await delay(80);
+
+      // Build key char by char
+      let key = '';
+      for (let pos = 0; pos < kl; pos++) {
+        const col = [...raw].filter((_, idx) => idx % kl === pos).join('');
+        const shift = bestShift(col, alpha);
+        key += alpha[shift];
+        scanRow.textContent = `KL=${kl} | Pos ${pos+1}/${kl} → ${alpha[shift]}`;
+        await delay(40);
+      }
+
+      const { result } = vigenere(raw, key, alpha, false);
+      const score = textScore(result);
+      results.push({ key, result, score, kl });
+    }
+
+    bar.style.width = '100%';
+    status.textContent = 'Tamamlandı.';
+
+  } else {
+    // ── Brute force short keys ──
+    const chars = alpha;
+    const maxLen = bfMaxLen;
+
+    // Generate all combos up to maxLen
+    const combos = [];
+    function gen(cur) {
+      if (cur.length > 0) combos.push(cur);
+      if (cur.length < maxLen) for (const c of chars) gen(cur + c);
+    }
+    gen('');
+
+    const total = combos.length;
+    status.textContent = `${total} anahtar denenecek…`;
+    await delay(80);
+
+    for (let i = 0; i < total; i++) {
+      const key = combos[i];
+      if (i % 200 === 0) {
+        bar.style.width = `${(i / total) * 100}%`;
+        scanRow.textContent = `Deneniyor: ${key}`;
+        status.textContent = `${i}/${total} anahtar denendi`;
+        await delay(0);
+      }
+      const { result } = vigenere(raw, key, alpha, false);
+      const score = textScore(result);
+      results.push({ key, result, score });
+    }
+    bar.style.width = '100%';
+    status.textContent = `${total} anahtar denendi.`;
+  }
+
+  // Sort & show top 5
+  results.sort((a, b) => b.score - a.score);
+  const top = results.slice(0, 5);
+
+  await delay(200);
+  scanRow.classList.remove('active');
+  resultsWrap.style.display = 'block';
+
+  for (const r of top) {
+    const snippet = r.result.slice(0, 60) + (r.result.length > 60 ? '…' : '');
+    const pct = Math.round(r.score * 100);
+    const div = document.createElement('div');
+    div.className = 'bf-result-item';
+    div.innerHTML = `
+      <div class="bf-result-head">
+        <span class="bf-key-badge">${r.key}</span>
+        <span class="bf-score">Skor: ${pct}%${r.kl ? ' · KL:'+r.kl : ''}</span>
+      </div>
+      <div class="bf-snippet">${snippet}</div>
+      <div class="bf-use-btn">↑ Şifrele paneline taşı</div>
+    `;
+    div.addEventListener('click', () => useResult(r.key, r.result));
+    list.appendChild(div);
+  }
+
+  bfRunning = false;
+}
+
+function useResult(key, result) {
+  document.getElementById('keyInput').value = key;
+  document.getElementById('outputText').textContent = result;
+  document.getElementById('outputText').className = 'output-text fade-in';
+  document.getElementById('statsRow').style.display = 'flex';
+  document.getElementById('sChars').textContent = result.replace(/[^A-Z]/g, '').length;
+  document.getElementById('sKey').textContent = key.length;
+  document.getElementById('sSkip').textContent = 0;
+  switchTab('cipher');
+}
+
+// ══════════════════════════════════════════════
+// PWA INSTALL
+// ══════════════════════════════════════════════
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('visible');
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBanner').classList.remove('visible');
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').classList.remove('visible');
+});
+
+// iOS hint (no beforeinstallprompt on Safari)
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+if (isIOS && !isStandalone) {
+  const banner = document.getElementById('installBanner');
+  banner.classList.add('visible');
+  banner.querySelector('.install-text span').textContent = 'Safari\'de "Paylaş → Ana Ekrana Ekle"';
+  document.getElementById('installBtn').style.display = 'none';
+}
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// Init
+updateAlphaPreview();
+</script>
+</body>
+</html>
