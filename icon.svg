@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0c0c10"/>
+  <text x="256" y="200" font-size="80" text-anchor="middle" fill="#e8e8f0" font-family="Georgia,serif" font-weight="bold" letter-spacing="2">p.4</text>
+  <text x="256" y="310" font-size="48" text-anchor="middle" fill="#5a8fff" font-family="Georgia,serif" font-style="italic">Vigenère</text>
+  <rect x="80" y="340" width="352" height="2" fill="#5a8fff" opacity="0.4"/>
+  <text x="256" y="390" font-size="24" text-anchor="middle" fill="#5a5a80" font-family="monospace" letter-spacing="4">CIPHER</text>
+</svg>

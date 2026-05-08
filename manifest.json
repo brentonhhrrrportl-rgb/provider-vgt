@@ -1,0 +1,20 @@
+{
+  "name": "provider.4 — Vigenère",
+  "short_name": "provider.4",
+  "description": "Gelişmiş şifreleme aracı",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0c10",
+  "theme_color": "#0c0c10",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "education"],
+  "lang": "tr"
+}

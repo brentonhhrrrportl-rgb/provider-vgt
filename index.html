@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="provider.4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0c0c10">
+<link rel="manifest" href="manifest.json">
+<title>provider.4 — Vigenère</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════
+   TOKENS
+══════════════════════════════════════ */
+:root {
+  --bg:       #0c0c10;
+  --surf:     #14141a;
+  --surf2:    #1c1c24;
+  --surf3:    #24242e;
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.13);
+  --accent:   #5a8fff;
+  --accent-d: #3a6fdf;
+  --accent2:  #ff5a8f;
+  --green:    #3affb4;
+  --yellow:   #ffd060;
+  --text:     #e8e8f0;
+  --sub:      #6060a0;
+  --sub2:     #9090c0;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Syne', sans-serif;
+  --r:        14px;
+  --r2:       10px;
+  --it: env(safe-area-inset-top,0px);
+  --ib: env(safe-area-inset-bottom,0px);
+}
+[data-theme="light"] {
+  --bg:    #f0f0f8;
+  --surf:  #ffffff;
+  --surf2: #f4f4fc;
+  --surf3: #eaeaf4;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text:  #1a1a2e;
+  --sub:   #8080b0;
+  --sub2:  #5050a0;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--sans);
+  min-height:100dvh;display:flex;flex-direction:column;
+  overflow-x:hidden;transition:background 0.3s,color 0.3s;
+}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  padding:calc(var(--it) + 12px) 16px 12px;
+  background:rgba(12,12,16,0.9);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+[data-theme="light"] .topbar{background:rgba(240,240,248,0.9)}
+.logo-mark{
+  font-family:var(--sans);font-size:16px;font-weight:800;
+  color:var(--accent);letter-spacing:-0.5px;flex-shrink:0;
+}
+.logo-sub{font-size:10px;color:var(--sub);font-weight:600;letter-spacing:1px;flex:1}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.icon-btn{
+  background:none;border:none;
+  color:var(--sub2);font-size:18px;
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background 0.15s,color 0.15s;
+}
+.icon-btn:active{background:var(--surf2)}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  padding:8px 0 calc(8px + var(--ib));
+  background:rgba(12,12,16,0.95);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:flex;
+}
+[data-theme="light"] .bottom-nav{background:rgba(240,240,248,0.95)}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;border:none;color:var(--sub);
+  font-family:var(--sans);font-size:9px;font-weight:600;
+  letter-spacing:0.5px;text-transform:uppercase;
+  padding:6px 4px;cursor:pointer;
+  transition:color 0.18s;
+}
+.nav-item .nav-icon{font-size:20px;line-height:1}
+.nav-item.active{color:var(--accent)}
+
+/* ── SCROLL ── */
+.main{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 14px calc(90px + var(--ib));
+}
+
+/* ── PANEL ── */
+.panel{display:none}
+.panel.active{display:block}
+
+/* ── CARD ── */
+.card{
+  background:var(--surf);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px;margin-bottom:10px;
+  position:relative;transition:border-color 0.2s;
+}
+.card-label{
+  font-size:9px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:var(--sub);
+  margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;
+}
+.card-label span{font-size:10px;letter-spacing:0;text-transform:none;font-weight:400}
+
+/* ── INPUTS ── */
+textarea,input[type=text],input[type=number],input[type=password]{
+  width:100%;background:var(--surf2);
+  border:1px solid var(--border);border-radius:var(--r2);
+  color:var(--text);font-family:var(--mono);font-size:16px;
+  padding:11px 12px;resize:none;outline:none;
+  transition:border-color 0.18s,box-shadow 0.18s;
+  -webkit-appearance:none;
+}
+textarea{height:96px;line-height:1.6}
+textarea:focus,input:focus{
+  border-color:rgba(90,143,255,0.5);
+  box-shadow:0 0 0 3px rgba(90,143,255,0.08);
+}
+.err{color:var(--accent2);font-size:11px;margin-top:5px;min-height:15px}
+
+/* ── CHIPS ── */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  background:var(--surf2);border:1px solid var(--border);
+  border-radius:20px;color:var(--sub2);
+  font-family:var(--mono);font-size:11px;font-weight:600;
+  padding:5px 12px;cursor:pointer;
+  transition:all 0.15s;min-height:30px;
+  display:flex;align-items:center;gap:5px;
+}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.green.on{background:var(--green);border-color:var(--green);color:#000}
+.chip:active{transform:scale(0.95)}
+
+/* ── BUTTONS ── */
+.btn{
+  background:var(--accent);border:none;border-radius:var(--r2);
+  color:#fff;font-family:var(--sans);font-size:14px;font-weight:700;
+  padding:0 20px;height:46px;cursor:pointer;
+  white-space:nowrap;flex-shrink:0;
+  transition:background 0.15s,transform 0.1s;
+  display:flex;align-items:center;gap:6px;
+}
+.btn:active{transform:scale(0.96);background:var(--accent-d)}
+.btn.full{width:100%;justify-content:center}
+.btn.ghost{background:var(--surf2);color:var(--text);border:1px solid var(--border2)}
+.btn.ghost:active{background:var(--surf3)}
+.btn.danger{background:var(--accent2)}
+.btn.sm{height:34px;font-size:12px;padding:0 12px}
+
+/* ── OUTPUT ── */
+.out-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.out-text{
+  font-family:var(--mono);font-size:15px;line-height:1.8;
+  color:var(--accent);word-break:break-all;min-height:50px;letter-spacing:0.5px;
+}
+.out-text.empty{color:var(--sub);font-style:italic;font-family:var(--sans);font-size:13px}
+.copy-btn{
+  background:none;border:1px solid var(--border2);border-radius:8px;
+  color:var(--sub);font-family:var(--sans);font-size:10px;font-weight:700;
+  letter-spacing:0.5px;text-transform:uppercase;padding:5px 11px;
+  cursor:pointer;min-height:32px;transition:all 0.18s;
+}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+
+/* ── STRENGTH BAR ── */
+.strength-wrap{margin-top:10px}
+.strength-bar-bg{background:var(--surf2);border-radius:99px;height:4px;overflow:hidden}
+.strength-bar{height:100%;border-radius:99px;transition:width 0.4s,background 0.4s}
+.strength-label{font-size:10px;color:var(--sub);margin-top:4px;display:flex;justify-content:space-between}
+
+/* ── KEY ROW ── */
+.key-row{display:flex;gap:8px;align-items:flex-end}
+.key-row input{flex:1;min-width:0}
+
+/* ── STATS ── */
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.stat{font-size:10px;color:var(--sub);font-weight:500}
+.stat b{color:var(--text);font-weight:600}
+
+/* ── ALPHA PREVIEW ── */
+.alpha-prev{
+  font-family:var(--mono);font-size:9px;color:var(--sub);
+  letter-spacing:1px;word-break:break-all;
+  padding:7px 10px;background:var(--surf2);
+  border-radius:8px;border:1px solid var(--border);margin-top:8px;line-height:1.8;
+}
+
+/* ── HISTORY / FAVORITES ── */
+.hist-item{
+  background:var(--surf2);border:1px solid var(--border);
+  border-radius:var(--r2);padding:11px 13px;margin-bottom:8px;
+  cursor:pointer;transition:border-color 0.15s;
+  position:relative;
+}
+.hist-item:active{border-color:var(--accent)}
+.hist-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.hist-badge{
+  font-family:var(--mono);font-size:9px;font-weight:600;
+  padding:2px 7px;border-radius:4px;
+  background:rgba(90,143,255,0.15);color:var(--accent);
+}
+.hist-badge.dec{background:rgba(58,255,180,0.12);color:var(--green)}
+.hist-badge.cs{background:rgba(255,208,96,0.15);color:var(--yellow)}
+.hist-time{font-size:10px;color:var(--sub);flex:1;text-align:right}
+.hist-key{font-family:var(--mono);font-size:11px;color:var(--sub2);margin-bottom:3px}
+.hist-text{font-family:var(--mono);font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-actions{display:flex;gap:6px;margin-top:8px}
+.fav-star{
+  position:absolute;top:10px;right:10px;
+  background:none;border:none;font-size:16px;cursor:pointer;
+  opacity:0.4;transition:opacity 0.15s,transform 0.15s;
+}
+.fav-star.on{opacity:1}
+.fav-star:active{transform:scale(1.3)}
+
+/* ── QR ── */
+#qrCanvas{display:block;margin:14px auto 0;border-radius:8px}
+
+/* ── BRUTE FORCE ── */
+.bf-scan{
+  font-family:var(--mono);font-size:11px;color:var(--sub);
+  letter-spacing:1px;padding:6px 0;min-height:20px;
+  transition:color 0.1s;
+}
+.bf-scan.live{color:var(--accent)}
+.prog-bg{background:var(--surf2);border-radius:99px;height:4px;overflow:hidden;margin:8px 0}
+.prog{height:100%;background:linear-gradient(90deg,var(--accent-d),var(--accent));border-radius:99px;transition:width 0.1s}
+.bf-item{
+  background:var(--surf2);border:1px solid var(--border);
+  border-radius:var(--r2);padding:11px 13px;margin-bottom:8px;
+  cursor:pointer;transition:border-color 0.15s;
+  animation:slideUp 0.25s ease forwards;opacity:0;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.bf-item:active{border-color:var(--accent)}
+.bf-key{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);margin-bottom:4px}
+.bf-score{font-size:10px;color:var(--sub)}
+.bf-snippet{font-family:var(--mono);font-size:11px;color:var(--text);opacity:0.8;margin-top:4px;word-break:break-all}
+
+/* ── TOOLS ── */
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.tool-card{
+  background:var(--surf);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px 12px;
+  cursor:pointer;transition:border-color 0.18s,background 0.18s;
+  text-align:center;
+}
+.tool-card:active{border-color:var(--accent);background:var(--surf2)}
+.tool-icon{font-size:28px;margin-bottom:6px}
+.tool-name{font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px}
+.tool-desc{font-size:9px;color:var(--sub);letter-spacing:0.3px}
+
+/* ── MORE ── */
+.more-section{margin-bottom:16px}
+.more-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--sub);margin-bottom:8px;padding:0 2px}
+.more-item{
+  background:var(--surf);border:1px solid var(--border);
+  border-radius:var(--r2);padding:13px 14px;margin-bottom:6px;
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  transition:border-color 0.15s;
+}
+.more-item:active{border-color:var(--accent)}
+.more-item-icon{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+.more-item-body{flex:1}
+.more-item-title{font-size:13px;font-weight:600;color:var(--text)}
+.more-item-sub{font-size:11px;color:var(--sub);margin-top:1px}
+.more-item-right{color:var(--sub);font-size:16px}
+.toggle-switch{
+  width:44px;height:26px;border-radius:13px;
+  background:var(--surf3);border:1px solid var(--border2);
+  position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;
+}
+.toggle-switch.on{background:var(--accent)}
+.toggle-knob{
+  position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:#fff;transition:transform 0.2s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+.toggle-switch.on .toggle-knob{transform:translateX(18px)}
+
+/* ── WATERMARK ── */
+.watermark{
+  position:fixed;bottom:calc(70px + var(--ib) + 8px);right:12px;
+  font-size:9px;font-weight:700;letter-spacing:1px;
+  color:var(--sub);opacity:0.4;pointer-events:none;z-index:50;
+  font-family:var(--mono);
+}
+
+/* ── MODAL ── */
+.modal-backdrop{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.7);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity 0.25s;
+}
+.modal-backdrop.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--surf);border-radius:20px 20px 0 0;
+  padding:20px 16px calc(20px + var(--ib));
+  width:100%;max-width:500px;
+  transform:translateY(100%);transition:transform 0.3s cubic-bezier(.32,.72,0,1);
+}
+.modal-backdrop.open .modal{transform:translateY(0)}
+.modal-handle{width:36px;height:4px;background:var(--surf3);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:14px}
+
+/* ── PIN ── */
+.pin-dots{display:flex;gap:12px;justify-content:center;margin:16px 0}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--surf3);border:2px solid var(--border2);transition:background 0.1s}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.pin-key{
+  background:var(--surf2);border:1px solid var(--border);
+  border-radius:12px;height:56px;
+  font-family:var(--sans);font-size:20px;font-weight:600;
+  color:var(--text);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 0.1s,transform 0.08s;
+}
+.pin-key:active{background:var(--surf3);transform:scale(0.95)}
+
+/* ── TABULA ── */
+.tabula-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:10px}
+table{border-collapse:collapse;font-size:8px;font-family:var(--mono)}
+td{padding:2px 3px;text-align:center;color:var(--sub)}
+td.th{color:var(--accent);font-weight:600}
+td.hl{color:#000;background:var(--accent);border-radius:2px}
+
+/* ── ANIM ── */
+.fade{animation:fadeIn 0.2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.char-anim span{opacity:0;animation:charPop 0.015s ease forwards}
+@keyframes charPop{to{opacity:1}}
+
+/* ── INSTALL BANNER ── */
+.install-banner{
+  background:linear-gradient(135deg,rgba(90,143,255,0.12),rgba(90,143,255,0.04));
+  border:1px solid rgba(90,143,255,0.2);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:10px;
+  display:none;align-items:center;gap:10px;
+}
+.install-banner.show{display:flex}
+.install-banner strong{font-size:12px}
+.install-banner span{font-size:10px;color:var(--sub)}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:14px 0}
+
+/* ── LANG ── */
+[data-lang="en"] .tr-only{display:none}
+[data-lang="tr"] .en-only{display:none}
+
+/* scrollbar hide */
+.main::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body data-theme="dark" data-lang="tr">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <div class="logo-mark">provider.4</div>
+    <div class="logo-sub">VIGENÈRE CIPHER</div>
+  </div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Tema">🌙</button>
+    <button class="icon-btn" id="langBtn" onclick="toggleLang()" title="Dil">TR</button>
+  </div>
+</div>
+
+<!-- WATERMARK -->
+<div class="watermark">provider.4</div>
+
+<!-- MAIN -->
+<div class="main" id="mainScroll">
+
+  <!-- ══════ CIPHER PANEL ══════ -->
+  <div class="panel active" id="panelCipher">
+
+    <!-- Install banner -->
+    <div class="install-banner" id="installBanner">
+      <span style="font-size:22px">📲</span>
+      <div style="flex:1">
+        <strong class="tr-only">Uygulamayı Yükle</strong>
+        <strong class="en-only">Install App</strong><br>
+        <span class="tr-only">Ana ekrana ekle, offline çalış</span>
+        <span class="en-only">Add to home screen, works offline</span>
+      </div>
+      <button class="btn sm" id="installBtn">
+        <span class="tr-only">Yükle</span><span class="en-only">Install</span>
+      </button>
+    </div>
+
+    <!-- Mode -->
+    <div class="card">
+      <div class="card-label">
+        <span class="tr-only">İşlem</span><span class="en-only">Mode</span>
+      </div>
+      <div class="chips">
+        <button class="chip on" id="modeEnc" onclick="setCMode('enc')">🔒 <span class="tr-only">Şifrele</span><span class="en-only">Encrypt</span></button>
+        <button class="chip" id="modeDec" onclick="setCMode('dec')">🔓 <span class="tr-only">Çöz</span><span class="en-only">Decrypt</span></button>
+      </div>
+    </div>
+
+    <!-- Alphabet -->
+    <div class="card">
+      <div class="card-label">
+        <span class="tr-only">Alfabe</span><span class="en-only">Alphabet</span>
+      </div>
+      <div class="chips" id="alphaChips">
+        <button class="chip on" onclick="setAlpha('EN')">EN</button>
+        <button class="chip" onclick="setAlpha('TR')">TR</button>
+        <button class="chip" onclick="setAlpha('DE')">DE</button>
+        <button class="chip" onclick="setAlpha('RU')">RU</button>
+        <button class="chip" onclick="setAlpha('custom')">+ <span class="tr-only">Özel</span><span class="en-only">Custom</span></button>
+      </div>
+      <div id="customAlphaWrap" style="display:none;margin-top:8px">
+        <input type="text" id="customAlpha" placeholder="Alfabeni gir: ABCÇD…" oninput="onCustomAlpha()" autocorrect="off" autocapitalize="characters">
+      </div>
+      <div class="alpha-prev" id="alphaPrev">A B C D E F G H I J K L M N O P Q R S T U V W X Y Z</div>
+    </div>
+
+    <!-- Input -->
+    <div class="card">
+      <div class="card-label" id="inputLabel">
+        <span class="tr-only">Düz Metin</span><span class="en-only">Plain Text</span>
+      </div>
+      <textarea id="inputText" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        placeholder="Metni buraya yazın…"></textarea>
+      <div class="err" id="inputErr"></div>
+    </div>
+
+    <!-- Key -->
+    <div class="card">
+      <div class="card-label">
+        <span class="tr-only">Anahtar</span><span class="en-only">Key</span>
+        <button class="btn sm ghost" onclick="generateKey()">🎲 <span class="tr-only">Üret</span><span class="en-only">Generate</span></button>
+      </div>
+      <div class="key-row">
+        <input type="text" id="keyInput" placeholder="ANAHTAR" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="onKeyInput()">
+        <button class="btn" onclick="runCipher()">▶</button>
+      </div>
+      <div class="err" id="keyErr"></div>
+      <!-- Strength -->
+      <div class="strength-wrap" id="strengthWrap" style="display:none">
+        <div class="strength-bar-bg"><div class="strength-bar" id="strengthBar"></div></div>
+        <div class="strength-label">
+          <span id="strengthText"></span>
+          <span id="strengthEntropy"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output -->
+    <div class="card" style="border-color:rgba(90,143,255,0.15)">
+      <div class="out-head">
+        <div class="card-label" id="outputLabel" style="margin:0">
+          <span class="tr-only">Şifreli Metin</span><span class="en-only">Ciphertext</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="copy-btn" id="copyMain" onclick="copyText('outputText','copyMain')">
+            <span class="tr-only">Kopyala</span><span class="en-only">Copy</span>
+          </button>
+          <button class="copy-btn" onclick="shareOutput()" title="Paylaş">📤</button>
+          <button class="copy-btn" onclick="showQR()" title="QR">▦</button>
+        </div>
+      </div>
+      <div class="out-text empty" id="outputText">
+        <span class="tr-only">Sonuç burada görünecek…</span>
+        <span class="en-only">Result will appear here…</span>
+      </div>
+      <div class="stats" id="statsRow" style="display:none">
+        <div class="stat"><span class="tr-only">Harf</span><span class="en-only">Chars</span> <b id="sChars">0</b></div>
+        <div class="stat"><span class="tr-only">Anahtar</span><span class="en-only">Key</span> <b id="sKey">0</b></div>
+        <div class="stat"><span class="tr-only">Atlandı</span><span class="en-only">Skipped</span> <b id="sSkip">0</b></div>
+        <div class="stat">Entropy <b id="sEnt">—</b></div>
+      </div>
+    </div>
+
+    <!-- Tabula Recta -->
+    <button class="btn full ghost" style="margin-bottom:10px" onclick="toggleTabula()">
+      <span id="tabulaLbl">▾ Tabula Recta</span>
+    </button>
+    <div id="tabulaWrap" style="display:none;margin-bottom:10px"></div>
+
+  </div>
+  <!-- /CIPHER -->
+
+  <!-- ══════ BRUTE PANEL ══════ -->
+  <div class="panel" id="panelBrute">
+    <div class="card">
+      <div class="card-label">
+        <span class="tr-only">Şifreli Metin</span><span class="en-only">Ciphertext</span>
+      </div>
+      <textarea id="bfText" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        placeholder="Kırılacak metni yapıştır…"></textarea>
+      <div class="err" id="bfErr"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">
+        <span class="tr-only">Yöntem</span><span class="en-only">Method</span>
+      </div>
+      <div class="chips" id="bfMethodChips" style="margin-bottom:10px">
+        <button class="chip on" data-m="auto" onclick="setBfMethod(this)">🧠 <span class="tr-only">Otomatik</span><span class="en-only">Auto</span></button>
+        <button class="chip" data-m="brute" onclick="setBfMethod(this)">⚡ <span class="tr-only">Kısa Anahtar</span><span class="en-only">Short Key</span></button>
+      </div>
+      <div id="bfBruteOpts" style="display:none;margin-bottom:10px">
+        <div class="card-label" style="margin-bottom:6px">
+          <span class="tr-only">Maks. uzunluk</span><span class="en-only">Max length</span>
+        </div>
+        <div class="chips" id="bfLenChips">
+          <button class="chip on" data-l="1" onclick="setBfLen(this)">1</button>
+          <button class="chip" data-l="2" onclick="setBfLen(this)">2</button>
+          <button class="chip" data-l="3" onclick="setBfLen(this)">3</button>
+        </div>
+      </div>
+      <button class="btn full" onclick="startBF()">
+        🔍 <span class="tr-only">Şifreyi Kır</span><span class="en-only">Crack Cipher</span>
+      </button>
+    </div>
+    <div id="bfProgress" style="display:none">
+      <div class="card">
+        <div class="card-label"><span class="tr-only">Taranıyor</span><span class="en-only">Scanning</span></div>
+        <div class="bf-scan live" id="bfScan">—</div>
+        <div class="prog-bg"><div class="prog" id="bfProg"></div></div>
+        <div class="stat" id="bfStatus"></div>
+      </div>
+    </div>
+    <div id="bfResults" style="display:none">
+      <div class="card-label" style="padding:0 2px;margin-bottom:8px">
+        <span class="tr-only">En İyi Sonuçlar</span><span class="en-only">Best Results</span>
+      </div>
+      <div id="bfList"></div>
+    </div>
+  </div>
+  <!-- /BRUTE -->
+
+  <!-- ══════ TOOLS PANEL ══════ -->
+  <div class="panel" id="panelTools">
+    <div class="tool-grid">
+      <div class="tool-card" onclick="openTool('caesar')">
+        <div class="tool-icon">🔤</div>
+        <div class="tool-name">Caesar</div>
+        <div class="tool-desc tr-only">Kaydırma şifresi</div>
+        <div class="tool-desc en-only">Shift cipher</div>
+      </div>
+      <div class="tool-card" onclick="openTool('rot13')">
+        <div class="tool-icon">🔄</div>
+        <div class="tool-name">ROT13</div>
+        <div class="tool-desc tr-only">13 kaydırma</div>
+        <div class="tool-desc en-only">13-shift cipher</div>
+      </div>
+      <div class="tool-card" onclick="openTool('atbash')">
+        <div class="tool-icon">🔀</div>
+        <div class="tool-name">Atbash</div>
+        <div class="tool-desc tr-only">Ters alfabe</div>
+        <div class="tool-desc en-only">Reverse alphabet</div>
+      </div>
+      <div class="tool-card" onclick="openTool('keygen')">
+        <div class="tool-icon">🎲</div>
+        <div class="tool-name tr-only">Anahtar Üret</div>
+        <div class="tool-name en-only">Key Generator</div>
+        <div class="tool-desc tr-only">Güçlü anahtar</div>
+        <div class="tool-desc en-only">Strong key</div>
+      </div>
+      <div class="tool-card" onclick="openTool('freq')">
+        <div class="tool-icon">📊</div>
+        <div class="tool-name tr-only">Frekans Analizi</div>
+        <div class="tool-name en-only">Freq. Analysis</div>
+        <div class="tool-desc tr-only">Harf dağılımı</div>
+        <div class="tool-desc en-only">Letter distribution</div>
+      </div>
+      <div class="tool-card" onclick="openTool('qr')">
+        <div class="tool-icon">▦</div>
+        <div class="tool-name">QR Kod</div>
+        <div class="tool-desc tr-only">Metni QR'a çevir</div>
+        <div class="tool-desc en-only">Text to QR code</div>
+      </div>
+    </div>
+
+    <!-- Tool workspace -->
+    <div class="card" id="toolWorkspace" style="display:none">
+      <div class="card-label" id="toolTitle">—</div>
+      <div id="toolBody"></div>
+    </div>
+  </div>
+  <!-- /TOOLS -->
+
+  <!-- ══════ MORE PANEL ══════ -->
+  <div class="panel" id="panelMore">
+
+    <!-- History -->
+    <div class="more-section">
+      <div class="more-title tr-only">Geçmiş</div>
+      <div class="more-title en-only">History</div>
+      <div id="histList"></div>
+      <button class="btn full ghost sm" onclick="clearHistory()" style="margin-top:4px">
+        🗑 <span class="tr-only">Geçmişi Temizle</span><span class="en-only">Clear History</span>
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Favorites -->
+    <div class="more-section">
+      <div class="more-title tr-only">Favoriler</div>
+      <div class="more-title en-only">Favorites</div>
+      <div id="favList"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Stats -->
+    <div class="more-section">
+      <div class="more-title tr-only">İstatistikler</div>
+      <div class="more-title en-only">Statistics</div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="stat" style="text-align:center">
+            <div style="font-size:26px;font-weight:800;color:var(--accent)" id="statTotal">0</div>
+            <div class="tr-only">Toplam İşlem</div><div class="en-only">Total Ops</div>
+          </div>
+          <div class="stat" style="text-align:center">
+            <div style="font-size:26px;font-weight:800;color:var(--green)" id="statEnc">0</div>
+            <div class="tr-only">Şifreleme</div><div class="en-only">Encrypted</div>
+          </div>
+          <div class="stat" style="text-align:center">
+            <div style="font-size:26px;font-weight:800;color:var(--accent2)" id="statDec">0</div>
+            <div class="tr-only">Çözme</div><div class="en-only">Decrypted</div>
+          </div>
+          <div class="stat" style="text-align:center">
+            <div style="font-size:26px;font-weight:800;color:var(--yellow)" id="statFav">0</div>
+            <div class="tr-only">Favori</div><div class="en-only">Favorites</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Settings -->
+    <div class="more-section">
+      <div class="more-title tr-only">Ayarlar</div>
+      <div class="more-title en-only">Settings</div>
+
+      <div class="more-item" onclick="toggleTheme()">
+        <div class="more-item-icon">🎨</div>
+        <div class="more-item-body">
+          <div class="more-item-title tr-only">Tema</div>
+          <div class="more-item-title en-only">Theme</div>
+          <div class="more-item-sub" id="themeLabel">Karanlık</div>
+        </div>
+        <div class="toggle-switch" id="themeToggle"><div class="toggle-knob"></div></div>
+      </div>
+
+      <div class="more-item" onclick="toggleLang()">
+        <div class="more-item-icon">🌐</div>
+        <div class="more-item-body">
+          <div class="more-item-title tr-only">Dil</div>
+          <div class="more-item-title en-only">Language</div>
+          <div class="more-item-sub" id="langLabel">Türkçe</div>
+        </div>
+        <div class="more-item-right">›</div>
+      </div>
+
+      <div class="more-item" onclick="openPinModal()">
+        <div class="more-item-icon">🔐</div>
+        <div class="more-item-body">
+          <div class="more-item-title tr-only">PIN Kilidi</div>
+          <div class="more-item-title en-only">PIN Lock</div>
+          <div class="more-item-sub" id="pinLabel">
+            <span class="tr-only">Kapalı</span><span class="en-only">Off</span>
+          </div>
+        </div>
+        <div class="toggle-switch" id="pinToggle"><div class="toggle-knob"></div></div>
+      </div>
+
+      <div class="more-item" onclick="exportData()">
+        <div class="more-item-icon">📤</div>
+        <div class="more-item-body">
+          <div class="more-item-title tr-only">Veriyi Dışa Aktar</div>
+          <div class="more-item-title en-only">Export Data</div>
+          <div class="more-item-sub tr-only">Geçmiş ve favorileri indir</div>
+          <div class="more-item-sub en-only">Download history & favorites</div>
+        </div>
+        <div class="more-item-right">›</div>
+      </div>
+
+      <div class="more-item" onclick="clearAll()">
+        <div class="more-item-icon">🗑</div>
+        <div class="more-item-body">
+          <div class="more-item-title" style="color:var(--accent2)" class="tr-only">Tüm Verileri Sil</div>
+          <div class="more-item-title" style="color:var(--accent2)" class="en-only">Clear All Data</div>
+          <div class="more-item-sub tr-only">Geçmiş, favoriler, ayarlar</div>
+          <div class="more-item-sub en-only">History, favorites, settings</div>
+        </div>
+        <div class="more-item-right">›</div>
+      </div>
+    </div>
+
+    <!-- About -->
+    <div class="divider"></div>
+    <div style="text-align:center;padding:10px 0 4px">
+      <div style="font-size:13px;font-weight:700;color:var(--accent)">provider.4</div>
+      <div style="font-size:10px;color:var(--sub);margin-top:3px;letter-spacing:1px">VIGENÈRE CIPHER v3.0</div>
+    </div>
+
+  </div>
+  <!-- /MORE -->
+
+</div>
+<!-- /MAIN -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav0" onclick="goTab(0)">
+    <span class="nav-icon">🔒</span>
+    <span class="tr-only">Şifrele</span><span class="en-only">Cipher</span>
+  </button>
+  <button class="nav-item" id="nav1" onclick="goTab(1)">
+    <span class="nav-icon">🔍</span>
+    <span class="tr-only">Kır</span><span class="en-only">Crack</span>
+  </button>
+  <button class="nav-item" id="nav2" onclick="goTab(2)">
+    <span class="nav-icon">🛠</span>
+    <span class="tr-only">Araçlar</span><span class="en-only">Tools</span>
+  </button>
+  <button class="nav-item" id="nav3" onclick="goTab(3)">
+    <span class="nav-icon">☰</span>
+    More
+  </button>
+</nav>
+
+<!-- QR MODAL -->
+<div class="modal-backdrop" id="qrModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">QR Kod</div>
+    <canvas id="qrCanvas" width="220" height="220"></canvas>
+    <button class="btn full" style="margin-top:14px" onclick="closeModal('qrModal')">
+      <span class="tr-only">Kapat</span><span class="en-only">Close</span>
+    </button>
+  </div>
+</div>
+
+<!-- PIN MODAL -->
+<div class="modal-backdrop" id="pinModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="pinModalTitle">PIN Kilidi Ayarla</div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key" onclick="pinPress('cancel')">✕</button>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key" onclick="pinPress('del')">⌫</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// DATABASE (localStorage)
+// ══════════════════════════════════════════════════════
+const DB = {
+  get: k => { try { return JSON.parse(localStorage.getItem('p4_'+k)); } catch { return null; } },
+  set: (k,v) => localStorage.setItem('p4_'+k, JSON.stringify(v)),
+  del: k => localStorage.removeItem('p4_'+k),
+};
+
+// Init DB
+let history  = DB.get('history')  || [];
+let favorites = DB.get('favorites') || [];
+let settings = DB.get('settings') || { theme:'dark', lang:'tr', pin:null };
+let stats    = DB.get('stats')    || { total:0, enc:0, dec:0 };
+
+function saveDB() {
+  DB.set('history',   history);
+  DB.set('favorites', favorites);
+  DB.set('settings',  settings);
+  DB.set('stats',     stats);
+}
+
+// ══════════════════════════════════════════════════════
+// ALPHABETS
+// ══════════════════════════════════════════════════════
+const ALPHAS = {
+  EN: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  TR: 'ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ',
+  DE: 'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜß',
+  RU: 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ',
+};
+const EN_FREQ = [0.082,0.015,0.028,0.043,0.127,0.022,0.020,0.061,0.070,0.002,0.008,0.040,0.024,0.067,0.075,0.019,0.001,0.060,0.063,0.091,0.028,0.010,0.023,0.001,0.020,0.001];
+
+let currentAlpha = 'EN';
+let customAlpha = '';
+let cMode = 'enc';
+let tabulaOpen = false;
+let bfMethod = 'auto';
+let bfMaxLen = 1;
+let bfRunning = false;
+
+function getAlpha() {
+  return currentAlpha === 'custom' ? customAlpha.toUpperCase() : ALPHAS[currentAlpha] || ALPHAS.EN;
+}
+
+// ══════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════
+const panels = ['panelCipher','panelBrute','panelTools','panelMore'];
+function goTab(i) {
+  panels.forEach((p,j) => {
+    document.getElementById(p).classList.toggle('active', j===i);
+    document.getElementById('nav'+j).classList.toggle('active', j===i);
+  });
+  document.getElementById('mainScroll').scrollTop = 0;
+  if (i===3) renderMore();
+}
+
+// ══════════════════════════════════════════════════════
+// THEME & LANG
+// ══════════════════════════════════════════════════════
+function applyTheme() {
+  const dark = settings.theme === 'dark';
+  document.body.dataset.theme = settings.theme;
+  document.getElementById('themeBtn').textContent = dark ? '🌙' : '☀️';
+  document.getElementById('themeToggle').classList.toggle('on', !dark);
+  document.getElementById('themeLabel').textContent = dark ? (settings.lang==='tr'?'Karanlık':'Dark') : (settings.lang==='tr'?'Açık':'Light');
+}
+function toggleTheme() {
+  settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(); saveDB();
+}
+function applyLang() {
+  document.body.dataset.lang = settings.lang;
+  document.getElementById('langBtn').textContent = settings.lang.toUpperCase();
+  document.getElementById('langLabel').textContent = settings.lang === 'tr' ? 'Türkçe' : 'English';
+}
+function toggleLang() {
+  settings.lang = settings.lang === 'tr' ? 'en' : 'tr';
+  applyLang(); saveDB();
+}
+
+// ══════════════════════════════════════════════════════
+// CIPHER MODE
+// ══════════════════════════════════════════════════════
+function setCMode(m) {
+  cMode = m;
+  document.getElementById('modeEnc').classList.toggle('on', m==='enc');
+  document.getElementById('modeDec').classList.toggle('on', m==='dec');
+  resetOut();
+}
+
+// ══════════════════════════════════════════════════════
+// ALPHA
+// ══════════════════════════════════════════════════════
+function setAlpha(a) {
+  currentAlpha = a;
+  document.querySelectorAll('#alphaChips .chip').forEach((c,i) => {
+    const keys = ['EN','TR','DE','RU','custom'];
+    c.classList.toggle('on', keys[i] === a);
+  });
+  document.getElementById('customAlphaWrap').style.display = a==='custom' ? 'block' : 'none';
+  updateAlphaPrev();
+  sanitizeKey();
+}
+function onCustomAlpha() {
+  customAlpha = document.getElementById('customAlpha').value;
+  updateAlphaPrev(); sanitizeKey();
+}
+function updateAlphaPrev() {
+  const a = getAlpha();
+  document.getElementById('alphaPrev').textContent = a ? [...a].join(' ') : '—';
+}
+function sanitizeKey() {
+  const a = getAlpha();
+  const el = document.getElementById('keyInput');
+  el.value = [...el.value.toUpperCase()].filter(c => a.includes(c)).join('');
+  onKeyInput();
+}
+
+// ══════════════════════════════════════════════════════
+// KEY INPUT & STRENGTH
+// ══════════════════════════════════════════════════════
+function onKeyInput() {
+  sanitizeKeyChars();
+  updateStrength();
+}
+function sanitizeKeyChars() {
+  const a = getAlpha();
+  const el = document.getElementById('keyInput');
+  el.value = [...el.value.toUpperCase()].filter(c => a.includes(c)).join('');
+}
+function updateStrength() {
+  const key = document.getElementById('keyInput').value;
+  const wrap = document.getElementById('strengthWrap');
+  if (!key) { wrap.style.display='none'; return; }
+  wrap.style.display = 'block';
+  const len = key.length;
+  const unique = new Set(key).size;
+  const alpha = getAlpha();
+  const entropy = Math.round(len * Math.log2(alpha.length) * (unique/len));
+  let score = 0;
+  if (len >= 4) score++;
+  if (len >= 8) score++;
+  if (unique >= 4) score++;
+  if (unique >= len*0.7) score++;
+  if (len >= 12) score++;
+  const labels = {
+    tr: ['Çok Zayıf','Zayıf','Orta','Güçlü','Çok Güçlü'],
+    en: ['Very Weak','Weak','Medium','Strong','Very Strong']
+  };
+  const colors = ['#ff4444','#ff8844','#ffd060','#3affb4','#5a8fff'];
+  const lang = settings.lang;
+  const label = labels[lang][Math.min(score, 4)];
+  const pct = Math.min(100, (score/4)*100);
+  document.getElementById('strengthBar').style.width = pct+'%';
+  document.getElementById('strengthBar').style.background = colors[Math.min(score,4)];
+  document.getElementById('strengthText').textContent = label;
+  document.getElementById('strengthEntropy').textContent = entropy+' bits';
+}
+
+function generateKey() {
+  const a = getAlpha();
+  const len = 8 + Math.floor(Math.random()*8);
+  let key = '';
+  for (let i=0; i<len; i++) key += a[Math.floor(Math.random()*a.length)];
+  document.getElementById('keyInput').value = key;
+  updateStrength();
+}
+
+// ══════════════════════════════════════════════════════
+// VIGENÈRE CORE
+// ══════════════════════════════════════════════════════
+function vigenere(text, key, alpha, encrypt) {
+  const t = text.toUpperCase();
+  const k = key.toUpperCase();
+  const n = alpha.length;
+  let result='', ki=0, skipped=0;
+  for (let i=0; i<t.length; i++) {
+    const ci = alpha.indexOf(t[i]);
+    if (ci===-1) { result+=t[i]; skipped++; continue; }
+    const ki2 = alpha.indexOf(k[ki%k.length]);
+    if (ki2===-1) { result+=t[i]; ki++; continue; }
+    const out = encrypt ? (ci+ki2)%n : (ci-ki2+n)%n;
+    result += alpha[out]; ki++;
+  }
+  return {result, skipped};
+}
+
+// ══════════════════════════════════════════════════════
+// RUN CIPHER
+// ══════════════════════════════════════════════════════
+function runCipher() {
+  const text = document.getElementById('inputText').value;
+  const key  = document.getElementById('keyInput').value;
+  const alpha = getAlpha();
+  document.getElementById('inputErr').textContent = '';
+  document.getElementById('keyErr').textContent = '';
+  if (!text.trim()) { document.getElementById('inputErr').textContent = '⚠ '+(settings.lang==='tr'?'Metin boş':'Text empty'); return; }
+  if (!key) { document.getElementById('keyErr').textContent = '⚠ '+(settings.lang==='tr'?'Anahtar gerekli':'Key required'); return; }
+  const r = vigenere(text, key, alpha, cMode==='enc');
+  revealOut(r.result);
+  const enc = [...r.result].filter(c=>alpha.includes(c)).length;
+  const entropy = Math.round(enc * Math.log2(alpha.length) / 10) / 10;
+  document.getElementById('statsRow').style.display='flex';
+  document.getElementById('sChars').textContent = enc;
+  document.getElementById('sKey').textContent = key.length;
+  document.getElementById('sSkip').textContent = r.skipped;
+  document.getElementById('sEnt').textContent = entropy+'b';
+  // Save to history
+  const entry = {
+    id: Date.now(),
+    mode: cMode,
+    alpha: currentAlpha,
+    key,
+    input: text.slice(0,60),
+    output: r.result.slice(0,60),
+    full: r.result,
+    time: new Date().toLocaleTimeString(),
+    fav: false,
+  };
+  history.unshift(entry);
+  if (history.length > 50) history.pop();
+  stats.total++; stats[cMode==='enc'?'enc':'dec']++;
+  saveDB();
+}
+
+function revealOut(text) {
+  const el = document.getElementById('outputText');
+  el.className = 'out-text char-anim';
+  el.innerHTML = '';
+  [...text].forEach((ch, i) => {
+    const sp = document.createElement('span');
+    sp.textContent = ch;
+    sp.style.animationDelay = i*12+'ms';
+    el.appendChild(sp);
+  });
+}
+
+function resetOut() {
+  const el = document.getElementById('outputText');
+  el.className = 'out-text empty';
+  el.innerHTML = settings.lang==='tr' ? 'Sonuç burada görünecek…' : 'Result will appear here…';
+  document.getElementById('statsRow').style.display='none';
+}
+
+// ══════════════════════════════════════════════════════
+// COPY & SHARE
+// ══════════════════════════════════════════════════════
+function copyText(elId, btnId) {
+  const el = document.getElementById(elId);
+  const t = el.textContent;
+  if (!t || t.includes('görünecek') || t.includes('appear')) return;
+  navigator.clipboard.writeText(t).then(() => {
+    const b = document.getElementById(btnId);
+    const prev = b.innerHTML;
+    b.textContent = '✓';
+    b.classList.add('ok');
+    setTimeout(() => { b.innerHTML = prev; b.classList.remove('ok'); }, 2000);
+  });
+}
+function shareOutput() {
+  const t = document.getElementById('outputText').textContent;
+  if (!t || t.includes('görünecek')) return;
+  if (navigator.share) navigator.share({ title: 'provider.4', text: t });
+  else copyText('outputText','copyMain');
+}
+
+// ══════════════════════════════════════════════════════
+// QR CODE (pure JS, no lib)
+// ══════════════════════════════════════════════════════
+function showQR() {
+  const text = document.getElementById('outputText').textContent;
+  if (!text || text.includes('görünecek') || text.includes('appear')) return;
+  openModal('qrModal');
+  drawQR(text.slice(0,200));
+}
+function drawQR(text) {
+  // Simple visual QR placeholder — draw a pattern canvas
+  const canvas = document.getElementById('qrCanvas');
+  const ctx = canvas.getContext('2d');
+  const size = 220;
+  canvas.width = canvas.height = size;
+  const isDark = settings.theme === 'dark';
+  ctx.fillStyle = isDark ? '#1c1c24' : '#ffffff';
+  ctx.fillRect(0,0,size,size);
+  // Use text bytes as seed for pattern
+  const bytes = [...text].map(c=>c.charCodeAt(0));
+  const modules = 21;
+  const cell = Math.floor((size-20)/modules);
+  const off = Math.floor((size - modules*cell)/2);
+  // Simple deterministic pixel pattern from text hash
+  let hash = 0;
+  for (const b of bytes) hash = (hash*31+b)>>>0;
+  const rng = (seed) => { seed = (seed^61)^(seed>>>16); seed += seed<<3; seed ^= seed>>>4; seed *= 0x27d4eb2d; return ((seed^(seed>>>15))>>>0)/0xffffffff; };
+  ctx.fillStyle = isDark ? '#e8e8f0' : '#1a1a2e';
+  for (let r=0; r<modules; r++) {
+    for (let c=0; c<modules; c++) {
+      // Corner squares
+      const inCorner = (r<7&&c<7)||(r<7&&c>=modules-7)||(r>=modules-7&&c<7);
+      if (inCorner) {
+        const er = r%7, ec = c%7;
+        const border = er===0||er===6||ec===0||ec===6;
+        const inner = er>=2&&er<=4&&ec>=2&&ec<=4;
+        if (border||inner) { ctx.fillRect(off+c*cell, off+r*cell, cell,cell); }
+        continue;
+      }
+      // Data modules
+      const idx = r*modules+c;
+      const s = (hash + idx*2654435761)>>>0;
+      if (rng(s^(bytes[idx%bytes.length]||0)) > 0.5) {
+        ctx.fillRect(off+c*cell, off+r*cell, cell,cell);
+      }
+    }
+  }
+  // Center label
+  ctx.fillStyle = isDark ? 'rgba(12,12,16,0.85)' : 'rgba(240,240,248,0.85)';
+  ctx.fillRect(size/2-38, size/2-12, 76, 24);
+  ctx.fillStyle = isDark ? '#5a8fff' : '#3a6fdf';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('provider.4', size/2, size/2+4);
+}
+
+// ══════════════════════════════════════════════════════
+// TABULA RECTA
+// ══════════════════════════════════════════════════════
+function toggleTabula() {
+  tabulaOpen = !tabulaOpen;
+  const w = document.getElementById('tabulaWrap');
+  w.style.display = tabulaOpen ? 'block' : 'none';
+  document.getElementById('tabulaLbl').textContent = tabulaOpen ? '▴ Tabula Recta' : '▾ Tabula Recta';
+  if (tabulaOpen) buildTabula();
+}
+function buildTabula() {
+  const a = getAlpha(); const key = document.getElementById('keyInput').value.toUpperCase();
+  const n = a.length;
+  let h = '<div class="tabula-wrap"><table><tr><td class="th">·</td>';
+  for (const c of a) h += `<td class="th">${c}</td>`;
+  h += '</tr>';
+  for (let r=0; r<n; r++) {
+    const isKey = key.includes(a[r]);
+    h += `<tr><td class="th">${a[r]}</td>`;
+    for (let c=0; c<n; c++) h += `<td${isKey?' class="hl"':''}>${a[(r+c)%n]}</td>`;
+    h += '</tr>';
+  }
+  h += '</table></div>';
+  document.getElementById('tabulaWrap').innerHTML = h;
+}
+
+// ══════════════════════════════════════════════════════
+// BRUTE FORCE
+// ══════════════════════════════════════════════════════
+function setBfMethod(el) {
+  document.querySelectorAll('#bfMethodChips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  bfMethod = el.dataset.m;
+  document.getElementById('bfBruteOpts').style.display = bfMethod==='brute'?'block':'none';
+}
+function setBfLen(el) {
+  document.querySelectorAll('#bfLenChips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  bfMaxLen = parseInt(el.dataset.l);
+}
+function ic(text) {
+  const f={}; let n=0;
+  for (const c of text) if (/[A-Z]/.test(c)){f[c]=(f[c]||0)+1;n++;}
+  if (n<2) return 0;
+  let s=0; for (const v of Object.values(f)) s+=v*(v-1);
+  return s/(n*(n-1));
+}
+function guessKL(text, max=8) {
+  const cl = text.replace(/[^A-Z]/g,'');
+  return Array.from({length:max},(_,i)=>i+1).map(kl=>({
+    kl, ic: Array.from({length:kl},(_,i)=>[...cl].filter((_,j)=>j%kl===i).join('')).reduce((s,col)=>s+ic(col),0)/kl
+  })).sort((a,b)=>b.ic-a.ic).slice(0,4).map(x=>x.kl);
+}
+function bestShift(col, n) {
+  const freq=new Array(n).fill(0); let total=0;
+  for (const c of col){const i='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf(c);if(i!==-1){freq[i%n]++;total++;}}
+  if(!total) return 0;
+  const f=freq.map(x=>x/total);
+  let best=-Infinity, bestK=0;
+  for(let k=0;k<n;k++){let sc=0;for(let i=0;i<n;i++) sc+=f[(i+k)%n]*(EN_FREQ[i%EN_FREQ.length]||1/26);if(sc>best){best=sc;bestK=k;}}
+  return bestK;
+}
+function scoreText(text) {
+  const cl=text.replace(/[^A-Z]/g,''); if(!cl.length) return 0;
+  const f={}; for(const c of cl) f[c]=(f[c]||0)+1;
+  let s=0; for(const c of 'ETAOINSHRDLU') s+=(f[c]||0);
+  return s/cl.length;
+}
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function startBF() {
+  if (bfRunning) return;
+  const raw = document.getElementById('bfText').value.toUpperCase().replace(/[^A-Z]/g,'');
+  document.getElementById('bfErr').textContent='';
+  if (raw.length<8){document.getElementById('bfErr').textContent='⚠ Min 8 harf';return;}
+  bfRunning=true;
+  const progress=document.getElementById('bfProgress');
+  const results=document.getElementById('bfResults');
+  const scan=document.getElementById('bfScan');
+  const bar=document.getElementById('bfProg');
+  const status=document.getElementById('bfStatus');
+  const list=document.getElementById('bfList');
+  progress.style.display='block'; results.style.display='none'; list.innerHTML='';
+  bar.style.width='0%'; scan.classList.add('live');
+  const found=[];
+  if (bfMethod==='auto') {
+    scan.textContent='IC analizi…'; bar.style.width='5%'; await delay(100);
+    const kls=guessKL(raw,10);
+    for(let li=0;li<kls.length;li++){
+      const kl=kls[li]; let key='';
+      scan.textContent=`KL=${kl} deneniyor…`; bar.style.width=`${10+(li/kls.length)*75}%`;
+      for(let pos=0;pos<kl;pos++){
+        const col=[...raw].filter((_,i)=>i%kl===pos).join('');
+        const sh=bestShift(col,26);
+        key+='ABCDEFGHIJKLMNOPQRSTUVWXYZ'[sh];
+        scan.textContent=`KL=${kl} | pos ${pos+1}/${kl} → ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[sh]}`;
+        await delay(35);
+      }
+      const {result}=vigenere(raw,key,ALPHAS.EN,false);
+      found.push({key,result,score:scoreText(result),kl});
+    }
+  } else {
+    const alpha='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const combos=[];
+    const gen=cur=>{if(cur.length>0)combos.push(cur);if(cur.length<bfMaxLen)for(const c of alpha)gen(cur+c);};
+    gen('');
+    status.textContent=combos.length+' anahtar…';
+    for(let i=0;i<combos.length;i++){
+      const key=combos[i];
+      if(i%300===0){bar.style.width=`${(i/combos.length)*100}%`;scan.textContent='Deneniyor: '+key;await delay(0);}
+      const {result}=vigenere(raw,key,ALPHAS.EN,false);
+      found.push({key,result,score:scoreText(result)});
+    }
+  }
+  bar.style.width='100%';
+  found.sort((a,b)=>b.score-a.score);
+  await delay(150);
+  scan.classList.remove('live');
+  results.style.display='block';
+  found.slice(0,5).forEach((r,i)=>{
+    const div=document.createElement('div');
+    div.className='bf-item';
+    div.style.animationDelay=i*60+'ms';
+    div.innerHTML=`<div class="bf-key">${r.key} ${r.kl?'· KL:'+r.kl:''}</div><div class="bf-score">Skor: ${Math.round(r.score*100)}%</div><div class="bf-snippet">${r.result.slice(0,80)}…</div>`;
+    div.onclick=()=>useBfResult(r.key,r.result);
+    list.appendChild(div);
+  });
+  bfRunning=false;
+}
+function useBfResult(key,result) {
+  document.getElementById('keyInput').value=key;
+  revealOut(result);
+  document.getElementById('statsRow').style.display='flex';
+  document.getElementById('sChars').textContent=result.replace(/[^A-Z]/g,'').length;
+  document.getElementById('sKey').textContent=key.length;
+  document.getElementById('sSkip').textContent=0;
+  document.getElementById('sEnt').textContent='—';
+  goTab(0);
+}
+
+// ══════════════════════════════════════════════════════
+// TOOLS
+// ══════════════════════════════════════════════════════
+function openTool(t) {
+  const ws = document.getElementById('toolWorkspace');
+  const body = document.getElementById('toolBody');
+  const title = document.getElementById('toolTitle');
+  ws.style.display = 'block';
+  ws.scrollIntoView({behavior:'smooth'});
+  const tools = {
+    caesar: {
+      tr:'Caesar Şifresi', en:'Caesar Cipher',
+      html:`<input type="text" id="tIn" placeholder="Metin…" style="margin-bottom:8px" autocorrect="off" autocapitalize="off">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <input type="number" id="tShift" value="3" min="1" max="25" style="width:80px">
+        <button class="btn sm" onclick="runCaesar()">Uygula</button>
+      </div>
+      <div class="out-text" id="tOut" style="min-height:40px;color:var(--accent)">—</div>`
+    },
+    rot13: {
+      tr:'ROT13', en:'ROT13',
+      html:`<input type="text" id="tIn" placeholder="Metin…" style="margin-bottom:8px" autocorrect="off" autocapitalize="off">
+      <button class="btn sm full" onclick="runROT13()" style="margin-bottom:10px">ROT13 Uygula</button>
+      <div class="out-text" id="tOut" style="min-height:40px;color:var(--accent)">—</div>`
+    },
+    atbash: {
+      tr:'Atbash', en:'Atbash',
+      html:`<input type="text" id="tIn" placeholder="Metin…" style="margin-bottom:8px" autocorrect="off" autocapitalize="off">
+      <button class="btn sm full" onclick="runAtbash()" style="margin-bottom:10px">Atbash Uygula</button>
+      <div class="out-text" id="tOut" style="min-height:40px;color:var(--accent)">—</div>`
+    },
+    keygen: {
+      tr:'Anahtar Üretici', en:'Key Generator',
+      html:`<div class="chips" style="margin-bottom:10px" id="kgLenChips">
+        <button class="chip on" data-l="8" onclick="setKgLen(this)">8</button>
+        <button class="chip" data-l="12" onclick="setKgLen(this)">12</button>
+        <button class="chip" data-l="16" onclick="setKgLen(this)">16</button>
+        <button class="chip" data-l="24" onclick="setKgLen(this)">24</button>
+      </div>
+      <button class="btn sm full" onclick="runKeygen()" style="margin-bottom:10px">🎲 Üret</button>
+      <div class="out-text" id="tOut" style="color:var(--accent);min-height:40px">—</div>
+      <button class="btn sm ghost" style="margin-top:8px;width:100%" onclick="useGeneratedKey()">→ Anahtar olarak kullan</button>`
+    },
+    freq: {
+      tr:'Frekans Analizi', en:'Frequency Analysis',
+      html:`<textarea id="tIn" placeholder="Analiz edilecek metin…" style="height:80px;margin-bottom:8px" autocorrect="off" autocapitalize="off"></textarea>
+      <button class="btn sm full" onclick="runFreq()" style="margin-bottom:10px">Analiz Et</button>
+      <div id="tOut" style="min-height:40px"></div>`
+    },
+    qr: {
+      tr:'QR Kod Üret', en:'Generate QR Code',
+      html:`<textarea id="tIn" placeholder="QR'a çevrilecek metin…" style="height:80px;margin-bottom:8px" autocorrect="off" autocapitalize="off"></textarea>
+      <button class="btn sm full" onclick="runToolQR()" style="margin-bottom:10px">QR Üret</button>
+      <canvas id="toolQrCanvas" width="200" height="200" style="display:none;margin:0 auto;border-radius:8px;display:block"></canvas>`
+    },
+  };
+  const tool = tools[t];
+  title.textContent = settings.lang==='tr' ? tool.tr : tool.en;
+  body.innerHTML = tool.html;
+}
+
+let kgLen = 8;
+function setKgLen(el) {
+  document.querySelectorAll('#kgLenChips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on'); kgLen=parseInt(el.dataset.l);
+}
+function runCaesar() {
+  const t=document.getElementById('tIn').value.toUpperCase().replace(/[^A-Z]/g,'');
+  const sh=parseInt(document.getElementById('tShift').value)||3;
+  const r=[...t].map(c=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[(c.charCodeAt(0)-65+sh)%26]).join('');
+  document.getElementById('tOut').textContent=r||'—';
+}
+function runROT13() {
+  const t=document.getElementById('tIn').value.toUpperCase().replace(/[^A-Z]/g,'');
+  document.getElementById('tOut').textContent=[...t].map(c=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[(c.charCodeAt(0)-65+13)%26]).join('')||'—';
+}
+function runAtbash() {
+  const t=document.getElementById('tIn').value.toUpperCase().replace(/[^A-Z]/g,'');
+  document.getElementById('tOut').textContent=[...t].map(c=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[25-(c.charCodeAt(0)-65)]).join('')||'—';
+}
+function runKeygen() {
+  const a=getAlpha(); let k='';
+  for(let i=0;i<kgLen;i++) k+=a[Math.floor(Math.random()*a.length)];
+  document.getElementById('tOut').textContent=k;
+}
+function useGeneratedKey() {
+  const k=document.getElementById('tOut').textContent;
+  if(k&&k!=='—'){document.getElementById('keyInput').value=k;updateStrength();goTab(0);}
+}
+function runFreq() {
+  const t=document.getElementById('tIn').value.toUpperCase().replace(/[^A-Z]/g,'');
+  if(!t){document.getElementById('tOut').innerHTML='';return;}
+  const f={};for(const c of t)f[c]=(f[c]||0)+1;
+  const sorted=Object.entries(f).sort((a,b)=>b[1]-a[1]);
+  const max=sorted[0][1];
+  let h='<div style="font-family:var(--mono);font-size:11px">';
+  for(const [c,n] of sorted){
+    const pct=Math.round((n/t.length)*100);
+    const w=Math.round((n/max)*100);
+    h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="color:var(--accent);width:12px">${c}</span>
+      <div style="flex:1;background:var(--surf2);border-radius:2px;height:8px;overflow:hidden">
+        <div style="width:${w}%;background:var(--accent);height:100%;border-radius:2px"></div>
+      </div>
+      <span style="color:var(--sub);width:32px;text-align:right">${pct}%</span>
+    </div>`;
+  }
+  h+='</div>';
+  document.getElementById('tOut').innerHTML=h;
+}
+function runToolQR() {
+  const text=document.getElementById('tIn').value;
+  if(!text) return;
+  const canvas=document.getElementById('toolQrCanvas');
+  canvas.style.display='block';
+  // Reuse QR draw logic
+  const ctx=canvas.getContext('2d');
+  const size=200; canvas.width=canvas.height=size;
+  const isDark=settings.theme==='dark';
+  ctx.fillStyle=isDark?'#1c1c24':'#fff';ctx.fillRect(0,0,size,size);
+  const bytes=[...text].map(c=>c.charCodeAt(0));
+  let hash=0;for(const b of bytes)hash=(hash*31+b)>>>0;
+  const rng=seed=>{seed=(seed^61)^(seed>>>16);seed+=seed<<3;seed^=seed>>>4;seed*=0x27d4eb2d;return((seed^(seed>>>15))>>>0)/0xffffffff;};
+  const modules=21,cell=Math.floor((size-16)/modules),off=Math.floor((size-modules*cell)/2);
+  ctx.fillStyle=isDark?'#e8e8f0':'#1a1a2e';
+  for(let r=0;r<modules;r++){for(let c=0;c<modules;c++){
+    const inC=(r<7&&c<7)||(r<7&&c>=modules-7)||(r>=modules-7&&c<7);
+    if(inC){const er=r%7,ec=c%7;if(er===0||er===6||ec===0||ec===6||(er>=2&&er<=4&&ec>=2&&ec<=4))ctx.fillRect(off+c*cell,off+r*cell,cell,cell);continue;}
+    if(rng((hash+((r*modules+c)*2654435761)>>>0)^(bytes[(r*modules+c)%bytes.length]||0))>0.5)ctx.fillRect(off+c*cell,off+r*cell,cell,cell);
+  }}
+}
+
+// ══════════════════════════════════════════════════════
+// HISTORY & FAVORITES
+// ══════════════════════════════════════════════════════
+function renderMore() {
+  renderHistList();
+  renderFavList();
+  document.getElementById('statTotal').textContent=stats.total;
+  document.getElementById('statEnc').textContent=stats.enc;
+  document.getElementById('statDec').textContent=stats.dec;
+  document.getElementById('statFav').textContent=favorites.length;
+}
+function renderHistList() {
+  const el=document.getElementById('histList');
+  if(!history.length){el.innerHTML=`<div style="color:var(--sub);font-size:12px;text-align:center;padding:16px">${settings.lang==='tr'?'Henüz işlem yok':'No operations yet'}</div>`;return;}
+  el.innerHTML=history.slice(0,10).map(e=>histItemHTML(e)).join('');
+}
+function renderFavList() {
+  const el=document.getElementById('favList');
+  if(!favorites.length){el.innerHTML=`<div style="color:var(--sub);font-size:12px;text-align:center;padding:16px">${settings.lang==='tr'?'Favori yok':'No favorites'}</div>`;return;}
+  el.innerHTML=favorites.map(e=>histItemHTML(e,true)).join('');
+}
+function histItemHTML(e, isFav=false) {
+  const modeMap={enc:{tr:'ŞİFRELE',en:'ENC'},dec:{tr:'ÇÖZ',en:'DEC'}};
+  const badge=modeMap[e.mode]||{tr:e.mode,en:e.mode};
+  return `<div class="hist-item" onclick="loadHist('${e.id}')">
+    <div class="hist-meta">
+      <span class="hist-badge ${e.mode}">${settings.lang==='tr'?badge.tr:badge.en}</span>
+      <span class="hist-badge" style="background:rgba(255,208,96,0.1);color:var(--yellow)">${e.alpha||'EN'}</span>
+      <span class="hist-time">${e.time}</span>
+    </div>
+    <div class="hist-key">🔑 ${e.key}</div>
+    <div class="hist-text">${e.output}</div>
+    <div class="hist-actions">
+      <button class="btn sm ghost" onclick="event.stopPropagation();loadHist('${e.id}')">
+        ${settings.lang==='tr'?'Yükle':'Load'}
+      </button>
+      <button class="btn sm ghost" onclick="event.stopPropagation();copyDirect('${e.id}')">
+        ${settings.lang==='tr'?'Kopyala':'Copy'}
+      </button>
+      <button class="btn sm ghost" onclick="event.stopPropagation();toggleFav('${e.id}')" style="color:${e.fav?'var(--yellow)':'var(--sub)'}">
+        ${e.fav?'★':'☆'}
+      </button>
+    </div>
+  </div>`;
+}
+function loadHist(id) {
+  const e=history.find(h=>h.id==id)||favorites.find(f=>f.id==id);
+  if(!e) return;
+  document.getElementById('keyInput').value=e.key;
+  document.getElementById('inputText').value=e.input;
+  revealOut(e.full||e.output);
+  document.getElementById('statsRow').style.display='flex';
+  document.getElementById('sChars').textContent=e.full?(e.full.replace(/[^A-Z]/g,'').length):0;
+  document.getElementById('sKey').textContent=e.key.length;
+  document.getElementById('sSkip').textContent=0;
+  document.getElementById('sEnt').textContent='—';
+  goTab(0);
+}
+function copyDirect(id) {
+  const e=history.find(h=>h.id==id)||favorites.find(f=>f.id==id);
+  if(e) navigator.clipboard.writeText(e.full||e.output);
+}
+function toggleFav(id) {
+  const e=history.find(h=>h.id==id);
+  if(!e) return;
+  e.fav=!e.fav;
+  if(e.fav) favorites.unshift({...e});
+  else favorites=favorites.filter(f=>f.id!=id);
+  saveDB(); renderMore();
+}
+function clearHistory() {
+  if(confirm(settings.lang==='tr'?'Geçmiş silinsin mi?':'Clear history?'))
+  {history=[];saveDB();renderMore();}
+}
+
+// ══════════════════════════════════════════════════════
+// PIN LOCK
+// ══════════════════════════════════════════════════════
+let pinBuffer='', pinMode='set', pinFirst='';
+function openPinModal() {
+  pinBuffer=''; pinFirst='';
+  pinMode = settings.pin ? 'remove' : 'set';
+  document.getElementById('pinModalTitle').textContent = settings.pin ? (settings.lang==='tr'?'PIN\'i Kaldır':'Remove PIN') : (settings.lang==='tr'?'PIN Ayarla':'Set PIN');
+  updatePinDots();
+  openModal('pinModal');
+}
+function pinPress(k) {
+  if(k==='cancel'){closeModal('pinModal');return;}
+  if(k==='del'){pinBuffer=pinBuffer.slice(0,-1);updatePinDots();return;}
+  if(pinBuffer.length>=4) return;
+  pinBuffer+=k; updatePinDots();
+  if(pinBuffer.length===4) setTimeout(processPIN,120);
+}
+function updatePinDots() {
+  document.querySelectorAll('.pin-dot').forEach((d,i)=>d.classList.toggle('filled',i<pinBuffer.length));
+}
+function processPIN() {
+  if(pinMode==='set') {
+    if(!pinFirst){pinFirst=pinBuffer;pinBuffer='';updatePinDots();document.getElementById('pinModalTitle').textContent=settings.lang==='tr'?'Tekrar Gir':'Confirm PIN';return;}
+    if(pinFirst===pinBuffer){settings.pin=pinBuffer;saveDB();document.getElementById('pinToggle').classList.add('on');closeModal('pinModal');}
+    else{pinBuffer='';pinFirst='';updatePinDots();}
+  } else if(pinMode==='remove') {
+    if(settings.pin===pinBuffer){settings.pin=null;saveDB();document.getElementById('pinToggle').classList.remove('on');closeModal('pinModal');}
+    else{pinBuffer='';updatePinDots();}
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════════════
+function exportData() {
+  const data={history,favorites,stats,exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='provider4-export.json';
+  a.click();
+}
+function clearAll() {
+  if(confirm(settings.lang==='tr'?'Tüm veriler silinsin mi?':'Delete all data?')){
+    localStorage.clear();location.reload();
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-backdrop').forEach(b=>{
+  b.addEventListener('click',e=>{if(e.target===b)b.classList.remove('open');});
+});
+
+// ══════════════════════════════════════════════════════
+// PWA INSTALL
+// ══════════════════════════════════════════════════════
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  document.getElementById('installBanner').classList.add('show');
+});
+document.getElementById('installBtn').onclick=async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  document.getElementById('installBanner').classList.remove('show');
+};
+window.addEventListener('appinstalled',()=>document.getElementById('installBanner').classList.remove('show'));
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone=window.matchMedia('(display-mode: standalone)').matches;
+if(isIOS&&!isStandalone){
+  document.getElementById('installBanner').classList.add('show');
+  document.getElementById('installBanner').querySelector('span:last-child').textContent='Safari → Paylaş → Ana Ekrana Ekle';
+  document.getElementById('installBtn').style.display='none';
+}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+(function init() {
+  applyTheme();
+  applyLang();
+  updateAlphaPrev();
+  if(settings.pin) document.getElementById('pinToggle').classList.add('on');
+  // Lock screen on load if PIN set
+  if(settings.pin) {
+    pinMode='unlock';
+    pinBuffer='';pinFirst='';
+    document.getElementById('pinModalTitle').textContent=settings.lang==='tr'?'PIN Gir':'Enter PIN';
+    openModal('pinModal');
+    const orig=processPIN;
+    processPIN=function(){
+      if(pinBuffer===settings.pin){closeModal('pinModal');processPIN=orig;}
+      else{pinBuffer='';updatePinDots();}
+    };
+  }
+})();
+</script>
+</body>
+</html>
